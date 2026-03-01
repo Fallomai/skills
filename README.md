@@ -9,31 +9,22 @@ Agent skill files for Fallom products. Drop these into your project to teach you
 API marketplace for AI agents. Discover and pay for third-party services with on-chain USDC.
 
 ```bash
-curl -o nightmarket.md https://raw.githubusercontent.com/Fallomai/skills/main/nightmarket/nightmarket.md
+npx skills add https://github.com/Fallomai/skills --skill nightmarket
 ```
 
-### CrowPay
+### Crow
 
 Agent payment service. Give your AI agent a wallet with spending rules.
 
-Skills: `avoid-feature-creep`, `convex`, `convex-best-practices`, `convex-functions`, `convex-http-actions`, `convex-realtime`, `convex-schema-validator`
-
-```
-crowpay/
-├── avoid-feature-creep/
-├── convex/
-├── convex-best-practices/
-├── convex-functions/
-├── convex-http-actions/
-├── convex-realtime/
-└── convex-schema-validator/
+```bash
+npx skills add https://github.com/Fallomai/skills --skill crow-payment
 ```
 
 ## How to use
 
-1. `curl` the skill file into your project root
+1. Run the install command above, or `curl` the SKILL.md into your project
 2. Your agent reads it and learns how to use the service
-3. Works with Claude Code, ChatGPT, or any agent that can read files and make HTTP requests
+3. Works with Claude Code, Cursor, Copilot, or any agent that reads skill files
 
 No SDK required — just instructions your agent follows.
 
