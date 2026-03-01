@@ -13,70 +13,66 @@ Nightmarket lets agents discover and pay for third-party API services. Every cal
 
 - User asks to find or discover an API service
 - User wants to call a paid API through Nightmarket
-- User needs to set up Nightmarket MCP or connect their agent
-- User gets a 402 from a Nightmarket proxy URL
+- User needs to connect their agent to Nightmarket
+- Agent gets a 402 from a Nightmarket proxy URL
 
-## Setup — Choose One
+## Setup
 
-### Option A: MCP Server (recommended for Claude Code)
+### Step 1: Configure the MCP Server
 
-Add to your MCP configuration:
+Add this to the user's MCP configuration (e.g., `.claude/mcp.json`, `.cursor/mcp.json`):
 
 ```json
 {
-  "mcpServers": {
-    "nightmarket": {
-      "command": "npx",
-      "args": ["-y", "@nightmarket/mcp"],
-      "env": {
-        "WALLET_KEY": "<your-wallet-private-key>"
-      }
+  "nightmarket": {
+    "command": "npx",
+    "args": ["-y", "nightmarket-mcp"],
+    "env": {
+      "WALLET_KEY": "<wallet-private-key>"
     }
   }
 }
 ```
 
-This gives you three tools:
-- `browse_services` — Search and list available APIs
-- `get_service_details` — Full details, pricing, request/response examples
-- `call_service` — Call an API with automatic USDC payment
+### Step 2: Get a Wallet
 
-### Option B: REST API (works with any agent)
+If the user doesn't have a wallet, they need one funded with USDC on Base.
 
-No MCP required. Call services directly through the proxy:
-
-```
-GET/POST https://nightmarket.ai/api/x402/<endpoint_id>
-```
-
-Returns `402 Payment Required` with payment details on first call. See `references/rest-api.md`.
-
-## Payment
-
-### With CrowPay (recommended — no private key needed)
-
-If Crow is set up, 402 payments are handled automatically. No `WALLET_KEY` needed.
-
-Install the Crow skill:
+**With CrowPay (recommended):** Install the Crow skill for managed wallets with spending rules — no raw private key needed:
 ```
 npx skills add Fallomai/skills --skill crow
 ```
+The Crow skill handles wallet setup, spending limits, and human approval. See `references/crow-payments.md`.
 
-See `references/crow-payments.md` for the full integration flow.
+**Direct wallet:** The user provides their wallet private key as `WALLET_KEY`. Get one at https://crowpay.ai
 
-### With a direct wallet
+## Available MCP Tools
 
-Set `WALLET_KEY` in your MCP config (Option A). The MCP server signs payments using your private key.
+Once the MCP server is configured, these tools are available:
 
-Need a wallet? Get one at https://crowpay.ai
+### browse_services
+Search and list available APIs.
+- `search` (string, optional) — Filter by name, description, or seller
 
-## Quick Reference
+### get_service_details
+Get full details about a specific service including request/response examples.
+- `endpoint_id` (string, required) — The endpoint ID from browse_services
 
-| Action | MCP Tool | REST Endpoint |
-|--------|----------|---------------|
-| Browse services | `browse_services(search?)` | https://nightmarket.ai/marketplace |
-| Service details | `get_service_details(endpoint_id)` | — |
-| Call a service | `call_service(endpoint_id, method, body?)` | `POST /api/x402/<endpoint_id>` |
+### call_service
+Call an API with automatic USDC payment via x402.
+- `endpoint_id` (string, required) — The endpoint ID
+- `method` (enum, optional) — GET, POST, PUT, PATCH, DELETE (default: GET)
+- `body` (string, optional) — Request body for POST/PUT/PATCH
+- `headers` (Record, optional) — Additional HTTP headers
+
+## Calling Without MCP (REST API)
+
+Services can also be called directly via the proxy:
+```
+<METHOD> https://nightmarket.ai/api/x402/<endpoint_id>
+```
+
+Returns `402 Payment Required` on first call. See `references/rest-api.md`.
 
 ## References
 
