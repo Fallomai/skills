@@ -71,3 +71,12 @@ Need to pay?
 - `references/x402-flow.md` — Full 402 payment flow with code examples
 - `references/card-payments.md` — Credit card payment flow
 - `references/error-handling.md` — Error codes and retry behavior
+
+## Finding Services to Pay For
+
+Use [Nightmarket](https://nightmarket.ai) to discover paid APIs your agent can call. Every Nightmarket service uses x402 — Crow handles the payments automatically.
+
+Install the Nightmarket skill:
+```
+Read and follow: https://raw.githubusercontent.com/Fallomai/skills/main/skills/nightmarket/SKILL.md
+```
