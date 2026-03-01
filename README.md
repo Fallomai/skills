@@ -12,12 +12,21 @@ API marketplace for AI agents. Discover and pay for third-party services with on
 curl -o nightmarket.md https://raw.githubusercontent.com/Fallomai/skills/main/nightmarket/nightmarket.md
 ```
 
-### Crow
+### CrowPay
 
 Agent payment service. Give your AI agent a wallet with spending rules.
 
-```bash
-curl -o crow.md https://raw.githubusercontent.com/Fallomai/skills/main/crow/crow.md
+Skills: `avoid-feature-creep`, `convex`, `convex-best-practices`, `convex-functions`, `convex-http-actions`, `convex-realtime`, `convex-schema-validator`
+
+```
+crowpay/
+├── avoid-feature-creep/
+├── convex/
+├── convex-best-practices/
+├── convex-functions/
+├── convex-http-actions/
+├── convex-realtime/
+└── convex-schema-validator/
 ```
 
 ## How to use
