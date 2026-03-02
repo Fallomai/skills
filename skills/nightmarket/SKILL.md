@@ -7,8 +7,6 @@ description: Discover and call paid third-party API services through the Nightma
 
 Nightmarket is a marketplace where AI agents discover and pay for third-party API services. Every call settles on-chain in USDC on Base. No API keys, no subscriptions — just make an HTTP request, pay, and get your response.
 
-**Marketplace:** https://nightmarket.ai/marketplace
-
 ## When to Use
 
 - You need a third-party API (data enrichment, analytics, automation, AI models, content generation, etc.)
@@ -16,30 +14,62 @@ Nightmarket is a marketplace where AI agents discover and pay for third-party AP
 - You get a `402 Payment Required` from a `nightmarket.ai` URL
 - User wants their agent to access external services without managing API keys
 
-## Finding Services
+## Searching for Services
 
-Start here. Browse what's available at https://nightmarket.ai/marketplace.
+Search the marketplace to find what you need:
 
-Each listing shows:
-- **Endpoint ID** — what you use to call it
-- **HTTP method** — GET, POST, etc.
-- **Price** — USDC per call
-- **Request/response examples** — what to send and what you get back
-- **Usage stats** — total calls and revenue to gauge reliability
+```bash
+# Search for services by keyword
+curl "https://nightmarket.ai/api/marketplace?search=weather"
 
-## How It Works
+# List all services sorted by popularity
+curl "https://nightmarket.ai/api/marketplace?sort=popular"
 
-Every service on Nightmarket has a proxy URL. You make a standard HTTP request to it. That's it.
-
+# Combine search and sort
+curl "https://nightmarket.ai/api/marketplace?search=sentiment&sort=price_asc"
 ```
-curl -X POST https://nightmarket.ai/api/x402/<endpoint_id> \
+
+**Parameters:**
+- `search` (optional) — filter by name, description, or seller
+- `sort` (optional) — `popular`, `newest`, `price_asc`, `price_desc` (default: `popular`)
+
+**Response:**
+```json
+[
+  {
+    "_id": "abc123def456",
+    "name": "Weather Forecast API",
+    "description": "Get current weather and 7-day forecasts for any location",
+    "method": "GET",
+    "priceUsdc": 0.01,
+    "totalCalls": 1247,
+    "totalRevenue": 12.47,
+    "seller": { "companyName": "WeatherCo" }
+  }
+]
+```
+
+**Get full details for a specific service** (includes request/response examples):
+
+```bash
+curl "https://nightmarket.ai/api/marketplace/abc123def456"
+```
+
+This returns the same fields plus `requestExample` and `responseExample` — exactly what you need to know how to call it.
+
+## Calling a Service
+
+Every service has a proxy URL. Make a standard HTTP request:
+
+```bash
+curl -X POST "https://nightmarket.ai/api/x402/<endpoint_id>" \
   -H "Content-Type: application/json" \
   -d '{"query": "your request here"}'
 ```
 
-The first call returns `402 Payment Required` with payment details in the response headers. You pay (via CrowPay or your own wallet), then retry with the payment proof. The proxy forwards your request to the seller's API and returns the response.
+The first call returns `402 Payment Required`. Pay, then retry with proof. The proxy forwards to the seller's API and returns the response.
 
-Read `references/api.md` for full endpoint documentation, all headers, request/response formats, and error codes.
+Read `references/api.md` for all headers, request/response formats, and error codes.
 
 ## The Payment Flow
 
@@ -54,7 +84,7 @@ Read `references/api.md` for full endpoint documentation, all headers, request/r
 CrowPay handles 402 payments automatically — no wallet keys needed.
 
 1. Forward the 402 to CrowPay:
-```
+```bash
 curl -X POST https://api.crowpay.ai/authorize \
   -H "X-API-Key: crow_sk_..." \
   -H "Content-Type: application/json" \
@@ -77,14 +107,22 @@ npx skills add Fallomai/skills --skill crow
 
 CrowPay provides managed wallets with spending rules, human approval for large amounts, and audit trails — no raw private keys needed. Visit https://crowpay.ai for more info.
 
-## Quick Example
+## Quick End-to-End Example
 
 ```bash
-# 1. Call a service
-curl -X GET "https://nightmarket.ai/api/x402/abc123?city=NYC"
-# → 402 Payment Required (PAYMENT-REQUIRED header has payment details)
+# 1. Search for a weather API
+curl "https://nightmarket.ai/api/marketplace?search=weather"
+# → [{"_id": "abc123", "name": "Weather API", "method": "GET", "priceUsdc": 0.01, ...}]
 
-# 2. Pay via CrowPay and retry
+# 2. Get full details (see request/response examples)
+curl "https://nightmarket.ai/api/marketplace/abc123"
+# → {"requestExample": "?city=NYC", "responseExample": "{\"temp\": 72}", ...}
+
+# 3. Call it
+curl -X GET "https://nightmarket.ai/api/x402/abc123?city=NYC"
+# → 402 Payment Required
+
+# 4. Pay and retry
 curl -X GET "https://nightmarket.ai/api/x402/abc123?city=NYC" \
   -H "payment-signature: <signed payment>"
 # → 200 OK {"temp": 72, "conditions": "sunny"}
@@ -105,8 +143,6 @@ https://raw.githubusercontent.com/Fallomai/skills/main/skills/nightmarket/SKILL.
 
 ## References
 
-Read these for detailed documentation:
-
-- `references/api.md` — full API endpoint docs, all headers, request/response formats, error codes
+- `references/api.md` — full API docs: all endpoints, headers, request/response formats, error codes
 - `references/crow-payments.md` — complete CrowPay integration for automatic 402 handling
 - `references/mcp.md` — optional MCP server setup if you want tool-based access instead of HTTP
