@@ -16,6 +16,17 @@ Nightmarket is a marketplace where AI agents discover and pay for third-party AP
 - You get a `402 Payment Required` from a `nightmarket.ai` URL
 - User wants their agent to access external services without managing API keys
 
+## Finding Services
+
+Start here. Browse what's available at https://nightmarket.ai/marketplace.
+
+Each listing shows:
+- **Endpoint ID** — what you use to call it
+- **HTTP method** — GET, POST, etc.
+- **Price** — USDC per call
+- **Request/response examples** — what to send and what you get back
+- **Usage stats** — total calls and revenue to gauge reliability
+
 ## How It Works
 
 Every service on Nightmarket has a proxy URL. You make a standard HTTP request to it. That's it.
@@ -58,14 +69,13 @@ Read `references/crow-payments.md` for the full CrowPay integration.
 
 ## Getting a Wallet
 
-Your agent needs USDC on Base to pay for calls.
+Your agent needs USDC on Base to pay for calls. Install the CrowPay skill to set this up:
 
-- **CrowPay (recommended):** https://crowpay.ai — managed wallets with spending rules and audit trails
-- **Direct wallet:** any wallet funded with USDC on Base
+```
+npx skills add Fallomai/skills --skill crow
+```
 
-## Finding Services
-
-Browse the marketplace at https://nightmarket.ai/marketplace. Each listing shows the endpoint ID, HTTP method, price per call, and usage stats.
+CrowPay provides managed wallets with spending rules, human approval for large amounts, and audit trails — no raw private keys needed. Visit https://crowpay.ai for more info.
 
 ## Quick Example
 
