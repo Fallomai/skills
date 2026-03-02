@@ -1,210 +1,168 @@
-# x402 Payment Flow (USDC on Base)
+# x402 Payment Flow — End-to-End with curl
 
 Step-by-step guide for handling HTTP 402 Payment Required responses using Crow.
 
 ## Overview
 
-x402 is a protocol where APIs return HTTP 402 with payment details. Crow checks spending rules, signs an EIP-3009 authorization, and returns a payment payload your agent uses to retry the request.
+x402 is a protocol where APIs return HTTP 402 with payment details. You forward the 402 body to Crow, Crow checks spending rules and signs a USDC authorization, and you retry the original request with the signed payment.
 
-## Step 1: Receive the 402
+## Step 1: Call an API and get a 402
 
-When you call an x402-enabled API, you get back:
+```bash
+curl -i https://api.example.com/v1/data
+```
 
+Response:
 ```
 HTTP/1.1 402 Payment Required
 Content-Type: application/json
 
 {
   "x402Version": 2,
-  "resource": {
-    "url": "https://api.example.com/v1/data",
-    "description": "Access to data endpoint"
-  },
-  "accepts": [
-    {
-      "scheme": "exact",
-      "network": "eip155:8453",
-      "amount": "1000000",
-      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-      "payTo": "0xRecipientAddress",
-      "maxTimeoutSeconds": 60,
-      "extra": {
-        "name": "USDC",
-        "version": "2"
-      }
-    }
-  ]
+  "resource": {"url": "https://api.example.com/v1/data", "description": "Premium data"},
+  "accepts": [{
+    "scheme": "exact",
+    "network": "eip155:8453",
+    "amount": "500000",
+    "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "payTo": "0xMerchantAddress",
+    "maxTimeoutSeconds": 60,
+    "extra": {"name": "USDC", "version": "2"}
+  }]
 }
 ```
 
-## Step 2: Forward to Crow
+This means: "Pay $0.50 USDC on Base to access this endpoint."
 
-Pass the entire 402 body to Crow's `/authorize` endpoint:
+## Step 2: Forward the 402 to Crow
 
+Pass the **entire 402 response body** as `paymentRequired`, and add a clear `merchant` name and `reason`:
+
+```bash
+curl -X POST https://api.crowpay.ai/authorize \
+  -H "X-API-Key: crow_sk_abc123..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "paymentRequired": {
+      "x402Version": 2,
+      "resource": {"url": "https://api.example.com/v1/data", "description": "Premium data"},
+      "accepts": [{
+        "scheme": "exact",
+        "network": "eip155:8453",
+        "amount": "500000",
+        "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "payTo": "0xMerchantAddress",
+        "maxTimeoutSeconds": 60,
+        "extra": {"name": "USDC", "version": "2"}
+      }]
+    },
+    "merchant": "ExampleAPI",
+    "reason": "Fetching premium data for user analysis"
+  }'
 ```
-POST https://api.crowpay.ai/authorize
-X-API-Key: crow_sk_...
-Content-Type: application/json
 
+The wallet owner sees the `merchant` and `reason` when approving, so make them descriptive.
+
+## Step 3a: If 200 — Auto-approved
+
+Crow checked spending rules and $0.50 is within the auto-approve threshold. You get a signed payment payload:
+
+```json
 {
-  "paymentRequired": <entire 402 response body>,
-  "merchant": "ExampleAPI",
-  "reason": "Fetching data for user request"
+  "x402Version": 2,
+  "resource": {"url": "https://api.example.com/v1/data"},
+  "accepted": {"scheme": "exact", "network": "eip155:8453", "amount": "500000", "...": "..."},
+  "payload": {
+    "signature": "0xabc123...",
+    "authorization": {
+      "from": "0xYourWallet",
+      "to": "0xMerchantAddress",
+      "value": "500000",
+      "validAfter": "1740672089",
+      "validBefore": "1740672154",
+      "nonce": "0xrandomnonce..."
+    }
+  }
 }
 ```
 
-**Required fields:**
-- `paymentRequired` — the full 402 response JSON
-- `merchant` — human-readable name of the API/service (wallet owner sees this)
-- `reason` — why the payment is needed (wallet owner sees this)
+Retry your original request with this payload base64-encoded in the `X-PAYMENT` header:
 
-## Step 3: Handle the response
+```bash
+# Save the full Crow response to a variable
+CROW_RESPONSE='{"x402Version":2,"resource":{"url":"https://api.example.com/v1/data"},"accepted":{...},"payload":{...}}'
 
-### 200 — Auto-approved
+# Base64-encode it
+PAYMENT=$(echo -n "$CROW_RESPONSE" | base64 -w0)
 
-Crow checked spending rules and the amount is within the auto-approve threshold.
-
-The response is a signed payment payload. Retry your original request with this payload base64-encoded in the `X-PAYMENT` header:
-
-```javascript
-const paymentPayload = JSON.stringify(crowResponse);
-const encoded = btoa(paymentPayload);
-
-// Retry the original request
-fetch("https://api.example.com/v1/data", {
-  headers: {
-    "X-PAYMENT": encoded
-  }
-});
+# Retry the original request
+curl https://api.example.com/v1/data \
+  -H "X-PAYMENT: $PAYMENT"
 ```
 
-### 202 — Pending human approval
+The x402 facilitator on the API side verifies the signature and settles the USDC transfer on-chain.
 
-The amount exceeds the auto-approve threshold. The wallet owner must approve in their dashboard.
+## Step 3b: If 202 — Needs human approval
+
+The amount exceeds the auto-approve threshold. The wallet owner gets a notification and must approve in their dashboard.
 
 ```json
 {
   "status": "pending",
-  "approvalId": "abc123",
-  "expiresAt": 1234567890,
-  "message": "Payment requires human approval. Poll GET /authorize/status?id=abc123"
+  "approvalId": "approval_abc123",
+  "expiresAt": 1740672200,
+  "message": "Payment requires human approval. Poll GET /authorize/status?id=approval_abc123"
 }
 ```
 
-Poll for the decision:
+Poll every 3 seconds:
 
+```bash
+# Poll for status
+curl "https://api.crowpay.ai/authorize/status?id=approval_abc123" \
+  -H "X-API-Key: crow_sk_abc123..."
 ```
-GET https://api.crowpay.ai/authorize/status?id=abc123
-X-API-Key: crow_sk_...
+
+Keep polling while status is `"pending"` or `"signing"`.
+
+When the response contains a `payload` field, use it the same way as step 3a — base64-encode and retry.
+
+If status is `"denied"`, `"timeout"`, or `"failed"` — stop. The payment was not approved.
+
+## Step 3c: If 403 — Denied
+
+Spending rules blocked this payment. The response tells you why:
+
+```json
+{
+  "error": "Payment denied",
+  "reason": "Exceeds per-transaction limit of $25.00"
+}
 ```
 
-- Poll every **3 seconds**, not faster
-- When status is `"pending"` or `"signing"` → keep polling
-- When response contains a `payload` field → use it (same as 200 flow above)
-- When status is `"denied"`, `"timeout"`, or `"failed"` → stop and inform user
-
-### 403 — Denied
-
-Spending rules blocked this payment. Possible reasons:
-- Amount exceeds per-transaction limit
-- Daily spending limit reached
-- Merchant is blacklisted
-- Merchant is not on the whitelist (if whitelist is enabled)
-
-**Do not retry** with the same parameters. Inform the user.
-
-### 401 — Unauthorized
-
-API key is missing or invalid. Check your `X-API-Key` header.
-
-### 400 — Bad request
-
-Missing required fields or incompatible payment option. Check:
-- `paymentRequired` is present and valid
-- `merchant` and `reason` are provided
-- The wallet supports the requested network/asset
+Do **not** retry with the same parameters. Tell the user.
 
 ## Step 4: Report settlement
 
-After the x402 facilitator settles payment on-chain, report it:
+After the x402 facilitator settles the payment on-chain:
 
-```
-POST https://api.crowpay.ai/settle
-X-API-Key: crow_sk_...
-Content-Type: application/json
-
-{
-  "transactionId": "...",
-  "txHash": "0x..."
-}
+```bash
+curl -X POST https://api.crowpay.ai/settle \
+  -H "X-API-Key: crow_sk_abc123..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transactionId": "txn_xyz789",
+    "txHash": "0xabcdef1234567890..."
+  }'
 ```
 
 This is idempotent — safe to call multiple times.
 
-## Complete example
-
-```javascript
-// 1. Call the API
-let response = await fetch("https://api.example.com/v1/data");
-
-if (response.status === 402) {
-  const paymentRequired = await response.json();
-
-  // 2. Forward to Crow
-  const crowResponse = await fetch("https://api.crowpay.ai/authorize", {
-    method: "POST",
-    headers: {
-      "X-API-Key": "crow_sk_...",
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      paymentRequired,
-      merchant: "ExampleAPI",
-      reason: "Fetching data for user request"
-    })
-  });
-
-  if (crowResponse.status === 200) {
-    const payload = await crowResponse.json();
-    const encoded = btoa(JSON.stringify(payload));
-
-    // 3. Retry with payment
-    response = await fetch("https://api.example.com/v1/data", {
-      headers: { "X-PAYMENT": encoded }
-    });
-  } else if (crowResponse.status === 202) {
-    const { approvalId } = await crowResponse.json();
-
-    // 3. Poll for approval
-    let approved = false;
-    while (!approved) {
-      await new Promise(r => setTimeout(r, 3000));
-      const status = await fetch(
-        `https://api.crowpay.ai/authorize/status?id=${approvalId}`,
-        { headers: { "X-API-Key": "crow_sk_..." } }
-      ).then(r => r.json());
-
-      if (status.payload) {
-        const encoded = btoa(JSON.stringify(status));
-        response = await fetch("https://api.example.com/v1/data", {
-          headers: { "X-PAYMENT": encoded }
-        });
-        approved = true;
-      } else if (["denied", "timeout", "failed"].includes(status.status)) {
-        throw new Error(`Payment ${status.status}: ${status.reason}`);
-      }
-    }
-  } else if (crowResponse.status === 403) {
-    const { reason } = await crowResponse.json();
-    throw new Error(`Payment denied: ${reason}`);
-  }
-}
-```
-
 ## Key details
 
-- USDC amounts are in **atomic units** with 6 decimals: `1000000` = $1.00
+- USDC amounts are in **atomic units** with 6 decimals: `1000000` = $1.00, `500000` = $0.50
 - Network is always Base mainnet: `eip155:8453`
 - USDC contract: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
 - Crow signs EIP-3009 `TransferWithAuthorization` — the facilitator settles on-chain
-- The wallet owner's private key never leaves Crow's server
+- The wallet's private key never leaves Crow's server
+- Default auto-approve threshold is $5 — owner can change this in dashboard

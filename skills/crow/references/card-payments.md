@@ -1,90 +1,99 @@
-# Credit Card Payments
+# Credit Card Payments — End-to-End with curl
 
-Pay merchants with a credit card using Stripe Shared Payment Tokens (SPTs).
-
-## Overview
-
-When no 402 is involved (e.g., paying for SaaS, API credits, subscriptions), use the card payment flow. Crow provisions a scoped Stripe Shared Payment Token that the agent uses to pay the merchant.
+Pay merchants with a credit card using Stripe Shared Payment Tokens (SPTs). Use this when there's no 402 involved — e.g., paying for SaaS, API credits, subscriptions.
 
 ## Prerequisites
 
-- Wallet must be claimed (user visited `claimUrl`)
+- Wallet must be claimed (user visited `claimUrl` from `/setup`)
 - A credit card must be added in the dashboard at https://crowpay.ai/dashboard
 - Card spending rules are auto-created when a card is added
 
-## Request
+## Step 1: Request a card payment
 
-```
-POST https://api.crowpay.ai/authorize/card
-X-API-Key: crow_sk_...
-Content-Type: application/json
-
-{
-  "amountCents": 1000,
-  "currency": "usd",
-  "merchant": "OpenAI",
-  "reason": "GPT-4 API credits",
-  "merchantStripeAccount": "acct_...",
-  "paymentMethodId": "pm_..."
-}
+```bash
+curl -X POST https://api.crowpay.ai/authorize/card \
+  -H "X-API-Key: crow_sk_abc123..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amountCents": 500,
+    "merchant": "OpenAI",
+    "reason": "GPT-4 API credits for code review task"
+  }'
 ```
 
-### Fields
+### All request fields
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `amountCents` | Yes | Amount in cents. `1000` = $10.00 |
-| `currency` | No | Defaults to `"usd"` |
-| `merchant` | Yes | Human-readable merchant name |
-| `reason` | Yes | Why the payment is needed |
-| `merchantStripeAccount` | No | Stripe Connect account ID if applicable |
-| `paymentMethodId` | No | Specific card to use. Uses default card if omitted |
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `amountCents` | integer | Yes | — | Amount in cents. `500` = $5.00. Must be positive. |
+| `merchant` | string | Yes | — | Merchant name (wallet owner sees this) |
+| `reason` | string | Yes | — | Why the payment is needed (wallet owner sees this) |
+| `currency` | string | No | `"usd"` | Currency code |
+| `paymentMethodId` | string | No | default card | ID of a specific card to charge |
+| `merchantStripeAccount` | string | No | — | Stripe Connect account ID if applicable |
 
-## Responses
+## Step 2a: If 200 — Auto-approved
 
-### 200 — Auto-approved
+Amount is within the auto-approve threshold (default $5):
 
 ```json
 {
   "approved": true,
-  "sptToken": "spt_...",
-  "transactionId": "..."
+  "sptToken": "spt_abc123def456...",
+  "transactionId": "txn_xyz789"
 }
 ```
 
-The `sptToken` is a Stripe Shared Payment Token. Use it to pay the merchant through Stripe's payment API. Token expires in **1 hour**.
+The `sptToken` is a Stripe Shared Payment Token. Use it to pay the merchant through Stripe's payment API. The token expires in **1 hour**.
 
-### 202 — Pending human approval
+## Step 2b: If 202 — Needs human approval
 
-Amount exceeds the auto-approve threshold (default: $5). The wallet owner must approve.
+Amount exceeds auto-approve threshold:
 
 ```json
 {
   "status": "pending",
-  "approvalId": "...",
-  "expiresAt": 1234567890,
-  "message": "Payment requires human approval. Poll GET /authorize/status?id=..."
+  "approvalId": "approval_abc123",
+  "expiresAt": 1740672200,
+  "message": "Payment requires human approval. Poll GET /authorize/status?id=approval_abc123"
 }
 ```
 
-Poll `/authorize/status?id=<approvalId>` every 3 seconds. When approved, the response will contain `sptToken`.
+Poll every 3 seconds:
 
-### 403 — Denied
+```bash
+curl "https://api.crowpay.ai/authorize/status?id=approval_abc123" \
+  -H "X-API-Key: crow_sk_abc123..."
+```
+
+When approved, response will contain `sptToken`:
+
+```json
+{
+  "approved": true,
+  "sptToken": "spt_abc123def456...",
+  "transactionId": "txn_xyz789"
+}
+```
+
+If `"denied"`, `"timeout"`, or `"failed"` — stop and inform the user.
+
+## Step 2c: If 403 — Denied
 
 Spending rules blocked the payment:
-- Per-transaction limit exceeded (default: $25)
-- Daily limit exceeded (default: $50)
-- Merchant blacklisted or not on whitelist
 
-### 400 — Bad request
+```json
+{
+  "error": "Payment denied",
+  "reason": "Exceeds daily limit of $50.00"
+}
+```
 
-- `amountCents` is missing or not a positive integer
-- `merchant` or `reason` is missing
-- No payment methods configured (user needs to add a card first)
+Do not retry with same params. Tell the user.
 
 ## Default card spending rules
 
-Created automatically when a card is added to the dashboard:
+Created automatically when a card is added:
 
 | Rule | Default |
 |------|---------|
@@ -92,37 +101,20 @@ Created automatically when a card is added to the dashboard:
 | Per-transaction limit | $25 (2500 cents) |
 | Auto-approve threshold | $5 (500 cents) |
 
-Owners can customize these in the dashboard under the "Rules" tab.
-
-## Complete example
-
-```javascript
-const response = await fetch("https://api.crowpay.ai/authorize/card", {
-  method: "POST",
-  headers: {
-    "X-API-Key": "crow_sk_...",
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({
-    amountCents: 500,
-    merchant: "OpenAI",
-    reason: "GPT-4 API credits for code review"
-  })
-});
-
-if (response.status === 200) {
-  const { sptToken } = await response.json();
-  // Use sptToken with Stripe to pay merchant
-} else if (response.status === 202) {
-  const { approvalId } = await response.json();
-  // Poll /authorize/status for approval, then get sptToken
-}
-```
+Owners can customize all limits in the dashboard under the "Rules" tab.
 
 ## Settlement
 
-Card payments are tracked automatically via Stripe webhooks:
+Card payments are tracked automatically via Stripe webhooks — no need to call `/settle`.
+
 - `shared_payment.issued_token.used` → transaction marked as settled
 - `shared_payment.issued_token.deactivated` → transaction marked as failed
 
-No need to call `/settle` for card payments.
+## Common errors
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `amountCents must be a positive integer` | Invalid amount | Use a positive integer in cents |
+| `Missing required fields: merchant, reason` | Body incomplete | Add both fields |
+| `No payment methods configured` | No card added | User needs to add card in dashboard |
+| `Payment method not found or not owned by you` | Bad `paymentMethodId` | Omit it to use default card |
