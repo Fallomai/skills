@@ -105,7 +105,7 @@ Every first call returns 402. This is normal — it's how x402 works.
 Resend the exact same request with the payment proof.
 
 **Add this header:**
-- `payment-signature`: your signed x402 payment (or `X-PAYMENT` if using CrowPay)
+- `payment-signature`: your signed x402 payment proof
 
 **Successful response headers:**
 - `PAYMENT-RESPONSE`: settlement proof containing `txHash` (on-chain transaction hash)

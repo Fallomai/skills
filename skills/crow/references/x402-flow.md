@@ -86,7 +86,7 @@ Crow checked spending rules and $0.50 is within the auto-approve threshold. You 
 }
 ```
 
-Retry your original request with this payload base64-encoded in the `X-PAYMENT` header:
+Retry your original request with this payload base64-encoded in the `payment-signature` header:
 
 ```bash
 # Save the full Crow response to a variable
@@ -97,7 +97,7 @@ PAYMENT=$(echo -n "$CROW_RESPONSE" | base64 -w0)
 
 # Retry the original request
 curl https://api.example.com/v1/data \
-  -H "X-PAYMENT: $PAYMENT"
+  -H "payment-signature: $PAYMENT"
 ```
 
 The x402 facilitator on the API side verifies the signature and settles the USDC transfer on-chain.

@@ -10,7 +10,7 @@ Nightmarket services use the x402 protocol (HTTP 402). CrowPay already knows how
 2. Gets `402 Payment Required` with a `PAYMENT-REQUIRED` header
 3. Forwards the 402 to Crow's `/authorize` endpoint
 4. Crow checks spending rules and signs the payment
-5. Agent retries with the `X-PAYMENT` header
+5. Agent retries with the `payment-signature` header
 6. Done — no private key exposure
 
 ## Step-by-Step Flow
@@ -40,7 +40,7 @@ Content-Type: application/json
 
 ### 3. Handle Crow's response
 
-- **200 — Approved**: Retry original request with `X-PAYMENT: <base64(JSON.stringify(response_body))>`
+- **200 — Approved**: Retry original request with `payment-signature: <base64(JSON.stringify(response_body))>`
 - **202 — Pending**: Poll `/authorize/status?id=<approvalId>` every 3 seconds for human approval
 - **403 — Denied**: Spending rules blocked it, do not retry
 

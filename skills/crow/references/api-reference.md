@@ -132,7 +132,7 @@ To retry the original request with payment:
 ```bash
 PAYMENT=$(echo '{"x402Version":2,...}' | base64 -w0)
 curl https://api.example.com/v1/endpoint \
-  -H "X-PAYMENT: $PAYMENT"
+  -H "payment-signature: $PAYMENT"
 ```
 
 **202 Accepted — Pending human approval**

@@ -91,7 +91,7 @@ curl -X POST https://api.crowpay.ai/authorize \
   -d '{"paymentRequired": <402 response body>, "merchant": "Nightmarket", "reason": "API call"}'
 ```
 
-2. On 200 (approved): retry your original request with `X-PAYMENT` header from the response
+2. On 200 (approved): retry your original request with `payment-signature` header from the response
 3. On 202 (pending): poll `/authorize/status?id=<approvalId>` for human approval
 4. On 403 (denied): spending rules blocked it, don't retry
 
