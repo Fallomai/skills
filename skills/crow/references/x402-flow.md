@@ -57,7 +57,9 @@ curl -X POST https://api.crowpay.ai/authorize \
       }]
     },
     "merchant": "ExampleAPI",
-    "reason": "Fetching premium data for user analysis"
+    "reason": "Fetching premium data for user analysis",
+    "platform": "Claude MCP",
+    "service": "Premium data API"
   }'
 ```
 

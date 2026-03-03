@@ -66,6 +66,8 @@ curl -X POST https://api.crowpay.ai/authorize \
 | `merchant` | string | Yes | Human-readable name of the service. Wallet owner sees this. |
 | `reason` | string | Yes | Why the payment is needed. Wallet owner sees this. |
 | `walletAddress` | string | No | Specific wallet to use. Defaults to API key's wallet. |
+| `platform` | string | No | Which agent/platform is making the request (e.g. "Claude MCP", "LangChain"). Wallet owner sees this. |
+| `service` | string | No | What service/product the payment is for (e.g. "Weather API", "Premium data"). Wallet owner sees this. |
 
 ### paymentRequired format
 
@@ -192,6 +194,8 @@ curl -X POST https://api.crowpay.ai/authorize/card \
 | `currency` | string | No | Defaults to `"usd"` |
 | `paymentMethodId` | string | No | Specific card ID. Uses default card if omitted. |
 | `merchantStripeAccount` | string | No | Stripe Connect account ID if applicable |
+| `platform` | string | No | Which agent/platform is making the request (e.g. "Claude MCP", "LangChain"). Wallet owner sees this. |
+| `service` | string | No | What service/product the payment is for (e.g. "GPT-4 credits", "API subscription"). Wallet owner sees this. |
 
 ### Responses
 

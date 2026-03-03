@@ -114,7 +114,9 @@ curl -X POST https://api.crowpay.ai/authorize \
       }]
     },
     "merchant": "ExampleAPI",
-    "reason": "Fetching data for user task"
+    "reason": "Fetching data for user task",
+    "platform": "Claude MCP",
+    "service": "Premium data API"
   }'
 ```
 
@@ -122,6 +124,10 @@ curl -X POST https://api.crowpay.ai/authorize \
 - `paymentRequired` — the full 402 response body from the API
 - `merchant` — name of the service (wallet owner sees this)
 - `reason` — why the payment is needed (wallet owner sees this)
+
+**Optional context fields (recommended):**
+- `platform` — which agent/platform is making the request (e.g. "Claude MCP", "LangChain")
+- `service` — what service/product the payment is for (e.g. "Weather API call", "Premium data")
 
 **200 → Auto-approved.** Response is a signed payment payload. To retry the original request:
 ```bash
@@ -147,7 +153,9 @@ curl -X POST https://api.crowpay.ai/authorize/card \
   -d '{
     "amountCents": 1000,
     "merchant": "OpenAI",
-    "reason": "GPT-4 API credits"
+    "reason": "GPT-4 API credits",
+    "platform": "Claude MCP",
+    "service": "GPT-4 API credits"
   }'
 ```
 
@@ -160,6 +168,8 @@ curl -X POST https://api.crowpay.ai/authorize/card \
 - `currency` — defaults to `"usd"`
 - `paymentMethodId` — specific card to use (uses default card if omitted)
 - `merchantStripeAccount` — Stripe Connect account ID if applicable
+- `platform` — which agent/platform is making the request (e.g. "Claude MCP", "LangChain")
+- `service` — what service/product the payment is for (e.g. "GPT-4 credits", "API subscription")
 
 **200 → Auto-approved:**
 ```json
