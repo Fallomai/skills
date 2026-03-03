@@ -17,7 +17,9 @@ curl -X POST https://api.crowpay.ai/authorize/card \
   -d '{
     "amountCents": 500,
     "merchant": "OpenAI",
-    "reason": "GPT-4 API credits for code review task"
+    "reason": "GPT-4 API credits for code review task",
+    "platform": "Claude MCP",
+    "service": "GPT-4 API credits"
   }'
 ```
 
@@ -31,6 +33,8 @@ curl -X POST https://api.crowpay.ai/authorize/card \
 | `currency` | string | No | `"usd"` | Currency code |
 | `paymentMethodId` | string | No | default card | ID of a specific card to charge |
 | `merchantStripeAccount` | string | No | — | Stripe Connect account ID if applicable |
+| `platform` | string | No | — | Which agent/platform is making the request (e.g. "Claude MCP") |
+| `service` | string | No | — | What service/product the payment is for (e.g. "GPT-4 credits") |
 
 ## Step 2a: If 200 — Auto-approved
 
