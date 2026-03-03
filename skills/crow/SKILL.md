@@ -61,7 +61,7 @@ Agent needs to pay for something?
 ├── Got an HTTP 402 from an API? (x402 / USDC)
 │   │
 │   └── curl POST /authorize  ← pass the full 402 response body
-│       ├── 200 → Got signed payload. Retry original request with X-PAYMENT header.
+│       ├── 200 → Got signed payload. Retry original request with payment-signature header.
 │       ├── 202 → Needs human approval. Poll GET /authorize/status every 3s.
 │       └── 403 → Spending rules blocked it. Tell the user.
 │
@@ -125,9 +125,9 @@ curl -X POST https://api.crowpay.ai/authorize \
 
 **200 → Auto-approved.** Response is a signed payment payload. To retry the original request:
 ```bash
-# Base64-encode the entire response and put it in the X-PAYMENT header
+# Base64-encode the entire response and put it in the payment-signature header
 PAYMENT=$(echo '<full JSON response>' | base64)
-curl https://api.example.com/v1/data -H "X-PAYMENT: $PAYMENT"
+curl https://api.example.com/v1/data -H "payment-signature: $PAYMENT"
 ```
 
 **202 → Needs human approval.** Response contains `approvalId`. Poll for status (see below).
