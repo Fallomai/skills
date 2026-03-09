@@ -118,7 +118,7 @@ When you hit an API and get a `402 Payment Required` response, forward the entir
 
 ```bash
 curl -X POST https://api.crowpay.ai/authorize \
-  -H "X-API-Key: crow_sk_abc123..." \
+  -H "X-API-Key: $CROW_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "paymentRequired": {
@@ -169,7 +169,7 @@ See `references/x402-flow.md` for the complete end-to-end walkthrough.
 
 ```bash
 curl -X POST https://api.crowpay.ai/authorize/card \
-  -H "X-API-Key: crow_sk_abc123..." \
+  -H "X-API-Key: $CROW_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "amountCents": 1000,
@@ -210,7 +210,7 @@ See `references/card-payments.md` for full details.
 
 ```bash
 curl "https://api.crowpay.ai/authorize/status?id=APPROVAL_ID" \
-  -H "X-API-Key: crow_sk_abc123..."
+  -H "X-API-Key: $CROW_API_KEY"
 ```
 
 Poll every **3 seconds**. Do not poll faster.
@@ -233,7 +233,7 @@ After the x402 facilitator settles your payment on-chain, report it. Idempotent 
 
 ```bash
 curl -X POST https://api.crowpay.ai/settle \
-  -H "X-API-Key: crow_sk_abc123..." \
+  -H "X-API-Key: $CROW_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"transactionId": "...", "txHash": "0x..."}'
 ```
