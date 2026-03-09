@@ -32,7 +32,7 @@ X-API-Key: crow_sk_...
 Content-Type: application/json
 
 {
-  "paymentRequired": <the full 402 response body>,
+  "paymentRequired": <the structured 402 payment details>,
   "merchant": "Nightmarket — <service name>",
   "reason": "API call to <service name>"
 }
