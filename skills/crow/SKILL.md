@@ -249,7 +249,8 @@ curl "https://api.crowpay.ai/status" \
       "address": "0x1234...",
       "network": "eip155:8453",
       "balance": {
-        "usdcAtomicUnits": "5000000"
+        "usdcAtomicUnits": "5000000",
+        "usdcCents": 500
       },
       "spendingRules": {
         "dailyLimitCents": 5000,

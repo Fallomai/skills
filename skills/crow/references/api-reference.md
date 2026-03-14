@@ -336,7 +336,8 @@ curl "https://api.crowpay.ai/status" \
       "address": "0x1234567890abcdef...",
       "network": "eip155:8453",
       "balance": {
-        "usdcAtomicUnits": "5000000"
+        "usdcAtomicUnits": "5000000",
+        "usdcCents": 500
       },
       "spendingRules": {
         "dailyLimitCents": 5000,
@@ -390,6 +391,7 @@ Each wallet object:
 | `network` | string | CAIP-2 network ID |
 | `balance` | object\|null | On-chain USDC balance (null if RPC lookup failed) |
 | `balance.usdcAtomicUnits` | string | USDC balance in atomic units (6 decimals, so `"5000000"` = $5.00) |
+| `balance.usdcCents` | integer | USDC balance in cents — directly comparable to spending rule fields (e.g. `500` = $5.00) |
 | `spendingRules` | object\|null | Current spending rules (null if none configured) |
 | `spendingRules.dailyLimitCents` | integer | Max spending per day in cents |
 | `spendingRules.perTxLimitCents` | integer | Max per transaction in cents |
