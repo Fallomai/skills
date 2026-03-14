@@ -315,6 +315,90 @@ Poll every **3 seconds**. Do not poll faster.
 
 ---
 
+## GET /status
+
+Check wallet balance, spending rules, and daily spending. Returns all wallets and card payment methods for the authenticated user.
+
+```bash
+curl "https://api.crowpay.ai/status" \
+  -H "X-API-Key: crow_sk_..."
+```
+
+### Responses
+
+**200 OK**
+```json
+{
+  "wallets": [
+    {
+      "walletId": "abc123",
+      "name": "My Wallet",
+      "address": "0x1234567890abcdef...",
+      "network": "eip155:8453",
+      "spendingRules": {
+        "dailyLimitCents": 5000,
+        "perTxLimitCents": 2500,
+        "autoApproveThresholdCents": 500,
+        "merchantWhitelist": [],
+        "merchantBlacklist": []
+      },
+      "dailySpending": {
+        "date": "2026-03-13",
+        "totalCents": 1200,
+        "remainingCents": 3800
+      }
+    }
+  ],
+  "cards": [
+    {
+      "paymentMethodId": "def456",
+      "name": "Work Card",
+      "cardBrand": "visa",
+      "cardLast4": "4242",
+      "isDefault": true,
+      "spendingRules": {
+        "dailyLimitCents": 5000,
+        "perTxLimitCents": 2500,
+        "autoApproveThresholdCents": 500,
+        "merchantWhitelist": [],
+        "merchantBlacklist": []
+      },
+      "dailySpending": {
+        "date": "2026-03-13",
+        "totalCents": 0,
+        "remainingCents": 5000
+      }
+    }
+  ]
+}
+```
+
+**401 Unauthorized** — Invalid or missing API key.
+
+### Response fields
+
+Each wallet object:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `walletId` | string | Wallet ID |
+| `name` | string\|null | User-assigned wallet name |
+| `address` | string | Wallet address (0x...) |
+| `network` | string | CAIP-2 network ID |
+| `spendingRules` | object\|null | Current spending rules (null if none configured) |
+| `spendingRules.dailyLimitCents` | integer | Max spending per day in cents |
+| `spendingRules.perTxLimitCents` | integer | Max per transaction in cents |
+| `spendingRules.autoApproveThresholdCents` | integer | Auto-approve up to this amount in cents |
+| `spendingRules.merchantWhitelist` | string[] | Only these merchants allowed (empty = all allowed) |
+| `spendingRules.merchantBlacklist` | string[] | These merchants blocked |
+| `dailySpending.date` | string | Today's date (YYYY-MM-DD) |
+| `dailySpending.totalCents` | integer | Amount spent today in cents |
+| `dailySpending.remainingCents` | integer\|null | Remaining daily budget in cents (null if no rules) |
+
+Each card object includes the same `spendingRules` and `dailySpending` fields, plus `cardBrand`, `cardLast4`, and `isDefault`.
+
+---
+
 ## POST /settle
 
 Report that an x402 payment settled on-chain. Idempotent — safe to call multiple times.

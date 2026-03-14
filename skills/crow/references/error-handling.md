@@ -61,6 +61,13 @@ All Crow API errors return JSON:
 | 403 | `Forbidden` | Approval belongs to a different wallet |
 | 404 | `Approval not found` | Invalid approval ID |
 
+### GET /status
+
+| Status | Error | Cause |
+|--------|-------|-------|
+| 401 | `Missing X-API-Key header` | No API key provided |
+| 401 | `Invalid API key` | Key is wrong or revoked |
+
 ### POST /settle
 
 | Status | Error | Cause |
