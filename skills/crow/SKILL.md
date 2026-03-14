@@ -79,6 +79,9 @@ All subsequent requests need the `X-API-Key` header with your stored API key. Ne
 ```
 Agent needs to pay for something?
 │
+├── Want to check budget first?
+│   └── curl GET /status  ← returns wallets, cards, spending rules, daily budget remaining
+│
 ├── Got an HTTP 402 from an API? (x402 / USDC)
 │   │
 │   └── curl POST /authorize  ← pass the full 402 response body
@@ -224,6 +227,56 @@ Poll every **3 seconds**. Do not poll faster.
 | `"denied"` | Stop. Owner rejected the payment. |
 | `"timeout"` | Stop. Approval window expired. |
 | `"failed"` | Stop. Error during signing. |
+
+---
+
+### GET /status — Check wallet balance and spending rules
+
+Check your wallets' spending rules, daily spending, and remaining budget. Also returns card payment methods if configured.
+
+```bash
+curl "https://api.crowpay.ai/status" \
+  -H "X-API-Key: $CROW_API_KEY"
+```
+
+**200 OK:**
+```json
+{
+  "wallets": [
+    {
+      "walletId": "...",
+      "name": "My Wallet",
+      "address": "0x1234...",
+      "network": "eip155:8453",
+      "spendingRules": {
+        "dailyLimitCents": 5000,
+        "perTxLimitCents": 2500,
+        "autoApproveThresholdCents": 500,
+        "merchantWhitelist": [],
+        "merchantBlacklist": []
+      },
+      "dailySpending": {
+        "date": "2026-03-13",
+        "totalCents": 1200,
+        "remainingCents": 3800
+      }
+    }
+  ],
+  "cards": [
+    {
+      "paymentMethodId": "...",
+      "name": "Work Card",
+      "cardBrand": "visa",
+      "cardLast4": "4242",
+      "isDefault": true,
+      "spendingRules": { "...": "..." },
+      "dailySpending": { "...": "..." }
+    }
+  ]
+}
+```
+
+Use this before making payment requests to check if you have enough daily budget remaining, or to understand what spending limits apply.
 
 ---
 
